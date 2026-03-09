@@ -28,8 +28,9 @@ def main():
                     f"省份：{province_name} | 城市：{city_name} | 区县：{county_name}"
                 )
 
-                # 初始化结果数据列表（用于生成Excel）
-                batch_process_county(county_dir, result_excel_data)
+                # 初始化结果数据列表（用于生成Excel） （需要重新生成的数据可以在此过滤）
+                # if county_name == "230129延寿县" or county_name == "230126巴彦县":
+                #     batch_process_county(county_dir, result_excel_data)
 
                 # 按区县粒度导出：导出当前区县数据，然后清空
                 if EXPORT_CONFIG["unit"] == "county":

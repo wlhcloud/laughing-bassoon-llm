@@ -51,13 +51,13 @@ def batch_process_county(county_dir: str, result_data=[]):
         return
 
     # 4. 获取公布文件目录
-    published_folder = find_published_folder_in_county(county_dir)
-    if not published_folder:
-        log.warning(f"未找到 {county_name} 的附件1 公布文件目录，跳过")
-        return
+    # published_folder = find_published_folder_in_county(county_dir)
+    # if not published_folder:
+    #     log.warning(f"未找到 {county_name} 的附件1 公布文件目录，跳过")
+    #     return
 
     # 5. 读取公布文件列表
-    pub_files = get_folder_recursion_files(published_folder)
+    pub_files = get_folder_recursion_files(county_dir)
     if not pub_files:
         log.warning(f"{county_name} 无有效公布文档，跳过")
         return
@@ -117,7 +117,7 @@ def batch_process_county(county_dir: str, result_data=[]):
                 "公布名录中的单位名称": "",
                 "公布名录中的单位地址": "",
                 "公布文件中的单位名称": "",
-                "公布文件中的地址": "",
+                "公布文件中的单位地址": "",
                 "单位名称相似度": 0,
                 "单位名称是否匹配": "否",
                 "单位地址相似度": 0,
@@ -128,8 +128,8 @@ def batch_process_county(county_dir: str, result_data=[]):
             try:
                 site_name = unit_row[3].strip() if len(unit_row) > 3 else ""
                 site_address = unit_row[8].strip() if len(unit_row) > 8 else ""
-                row_data["公布名录中的文本单位名称"] = site_name
-                row_data["公布名录中的地址"] = site_address
+                row_data["公布名录中的单位名称"] = site_name
+                row_data["公布名录中的单位地址"] = site_address
             except (IndexError, AttributeError):
                 log.warning("文保单位数据行格式异常，跳过")
                 result_data.append(row_data)
@@ -150,13 +150,15 @@ def batch_process_county(county_dir: str, result_data=[]):
                     log.info(f"使用缓存结果：{cached_info}")
                     # 填充缓存结果到行数据
                     row_data["公布文件中的单位名称"] = cached_info.site_name or ""
-                    row_data["公布文件中的地址"] = cached_info.detailed_address or ""
+                    row_data["公布文件中的单位地址"] = (
+                        cached_info.detailed_address or ""
+                    )
                     # 重新计算相似度（确保数据准确）
                     name_similarity = fuzz.partial_ratio(
                         site_name, cached_info.site_name or ""
                     )
-                    row_data["名称相似度"] = name_similarity
-                    row_data["名称是否匹配"] = (
+                    row_data["单位名称相似度"] = name_similarity
+                    row_data["单位名称是否匹配"] = (
                         "是" if name_similarity >= THRESHOLD["file_match"] else "否"
                     )
                     _, addr_similarity = process.extractOne(
@@ -165,8 +167,8 @@ def batch_process_county(county_dir: str, result_data=[]):
                         scorer=fuzz.partial_ratio,
                     )
 
-                    row_data["地址相似度"] = addr_similarity
-                    row_data["地址是否匹配"] = (
+                    row_data["单位地址相似度"] = addr_similarity
+                    row_data["单位地址是否匹配"] = (
                         "是" if addr_similarity >= THRESHOLD["file_match"] else "否"
                     )
                 result_data.append(row_data)
@@ -246,13 +248,13 @@ def batch_process_county(county_dir: str, result_data=[]):
 
             if site_info:
                 row_data["公布文件中的单位名称"] = site_info.site_name or ""
-                row_data["公布文件中的地址"] = site_info.detailed_address or ""
-                row_data["名称相似度"] = final_name_similarity
-                row_data["名称是否匹配"] = (
+                row_data["公布文件中的单位地址"] = site_info.detailed_address or ""
+                row_data["单位名称相似度"] = final_name_similarity
+                row_data["单位名称是否匹配"] = (
                     "是" if final_name_similarity >= THRESHOLD["file_match"] else "否"
                 )
-                row_data["地址相似度"] = final_addr_similarity
-                row_data["地址是否匹配"] = (
+                row_data["单位地址相似度"] = final_addr_similarity
+                row_data["单位地址是否匹配"] = (
                     "是" if final_addr_similarity >= THRESHOLD["file_match"] else "否"
                 )
                 log.info(f"最终匹配结果：{row_data}")
