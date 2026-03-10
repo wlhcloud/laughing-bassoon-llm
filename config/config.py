@@ -15,11 +15,11 @@ LLM_CONFIG = {
 
 # 阈值配置
 THRESHOLD = {
-    "file_match": 60,  # 文件相似度阈值
+    "file_match": 50,  # 文件相似度阈值
     "name_match": 70,  # 文保单位名称匹配阈值
 }
 
 # 导出配置
 EXPORT_CONFIG = {
-    "unit": "province",  # 导出单位（province,city,county）
+    "unit": "county",  # 导出单位（province,city,county）
 }

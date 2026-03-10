@@ -17,7 +17,7 @@ from utils.file_utils import (
     get_prov_city_county_from_path,
 )
 from scripts.data_process import read_excel_get_notices
-from loguru import logger as log
+from logger import log
 
 
 def batch_process_county(county_dir: str, result_data=[]):
@@ -80,7 +80,7 @@ def batch_process_county(county_dir: str, result_data=[]):
             continue
 
         if not best_matched_doc:
-            log.info(f"{target_notice} 未找到匹配的公布文档，跳过")
+            log.error(f"{target_notice} 未找到匹配的公布文档，跳过")
             continue
 
         file_name, doc_match_score, file_path = best_matched_doc[0]
