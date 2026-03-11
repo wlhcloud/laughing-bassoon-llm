@@ -64,7 +64,6 @@ def batch_process_county(county_dir: str, result_data=[]):
 
     # 6. 缓存OCR解析结果和匹配结果
     documents_map: Dict[str, List] = {}
-    site_match_cache: Dict[str, Optional[object]] = {}
 
     # 7. 遍历每个通知处理
     for target_notice, unit_lists in notice_wenbao_map.items():
@@ -142,38 +141,6 @@ def batch_process_county(county_dir: str, result_data=[]):
 
             log.info(f"\n处理文保单位：{site_name}（地址：{site_address}）")
 
-            # 7.4 检查缓存
-            cache_key = f"{file_path}_{site_name}"
-            if cache_key in site_match_cache:
-                cached_info = site_match_cache[cache_key]
-                if cached_info:
-                    log.info(f"使用缓存结果：{cached_info}")
-                    # 填充缓存结果到行数据
-                    row_data["公布文件中的单位名称"] = cached_info.site_name or ""
-                    row_data["公布文件中的单位地址"] = (
-                        cached_info.detailed_address or ""
-                    )
-                    # 重新计算相似度（确保数据准确）
-                    name_similarity = fuzz.partial_ratio(
-                        site_name, cached_info.site_name or ""
-                    )
-                    row_data["单位名称相似度"] = name_similarity
-                    row_data["单位名称是否匹配"] = (
-                        "是" if name_similarity >= THRESHOLD["file_match"] else "否"
-                    )
-                    _, addr_similarity = process.extractOne(
-                        site_address,
-                        [cached_info.detailed_address or ""],
-                        scorer=fuzz.partial_ratio,
-                    )
-
-                    row_data["单位地址相似度"] = addr_similarity
-                    row_data["单位地址是否匹配"] = (
-                        "是" if addr_similarity >= THRESHOLD["file_match"] else "否"
-                    )
-                result_data.append(row_data)
-                continue
-
             # 7.5 匹配文保单位与OCR文档
             try:
                 matched_docs = match_site_with_ocr_docs(
@@ -181,13 +148,11 @@ def batch_process_county(county_dir: str, result_data=[]):
                 )
             except Exception as e:
                 log.error(f"匹配{site_name} OCR文档失败：{str(e)}", exc_info=True)
-                site_match_cache[cache_key] = None
                 result_data.append(row_data)
                 continue
 
             if not matched_docs:
                 log.warning(f"公布文件中未匹配到 {site_name}")
-                site_match_cache[cache_key] = None
                 result_data.append(row_data)
                 continue
 
@@ -228,7 +193,7 @@ def batch_process_county(county_dir: str, result_data=[]):
                     )
 
                     # 阈值判断
-                    if match_score >= THRESHOLD["file_match"]:
+                    if match_score >= THRESHOLD["name_match"]:
                         log.info(
                             f"名称匹配成功 | 原始名称：{site_name} | 抽取名称：{matched_name} | 相似度：{match_score}%"
                         )
@@ -244,18 +209,16 @@ def batch_process_county(county_dir: str, result_data=[]):
                         )
 
             # 7.7 填充最终数据
-            site_match_cache[cache_key] = site_info
-
             if site_info:
                 row_data["公布文件中的单位名称"] = site_info.site_name or ""
                 row_data["公布文件中的单位地址"] = site_info.detailed_address or ""
                 row_data["单位名称相似度"] = final_name_similarity
                 row_data["单位名称是否匹配"] = (
-                    "是" if final_name_similarity >= THRESHOLD["file_match"] else "否"
+                    "是" if final_name_similarity >= THRESHOLD["name_match"] else "否"
                 )
                 row_data["单位地址相似度"] = final_addr_similarity
                 row_data["单位地址是否匹配"] = (
-                    "是" if final_addr_similarity >= THRESHOLD["file_match"] else "否"
+                    "是" if final_addr_similarity >= THRESHOLD["name_match"] else "否"
                 )
                 log.info(f"最终匹配结果：{row_data}")
             else:

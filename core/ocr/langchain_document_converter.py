@@ -6,33 +6,30 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
 )
 from langchain_core.documents import Document
-
+from langchain_experimental.text_splitter import SemanticChunker
 from core.ocr.base64_image_extractor import ImageInfo
+from llm.client import text_emb
 
 
 class LangChainDocumentConverter:
     """LangChain文档转换器"""
 
-    def __init__(self):
-        self.chunk_size = 500
-        self.chunk_overlap = 50
+    def __init__(self, text_chunk_size: int = 1000):
+        self.text_chunk_size = text_chunk_size
+
         # Markdown标题分割器配置
         self.header_splitter = MarkdownHeaderTextSplitter(
             headers_to_split_on=[
-                ("#", "H1"),
-                ("##", "H2"),
-                ("###", "H3"),
+                ("#", "Header 1"),
+                ("##", "Header 2"),
+                ("###", "Header 3"),
             ],
             strip_headers=False,
         )
-        separators_long_str = r"\n\n||\n\t||\n# ||\n## ||\n### ||\n#### ||\n##### ||\n- ||\n* ||\n1. ||\n2. ||\n3. ||\n> ||```||\n```||\n·||\n●||\n■||\n【||\n】||\n「||\n」||\n《||\n》||。||！||？||；||：||……||—||～||，||、|| ||\t||"
-        separators = [sep for sep in separators_long_str.split("||") if sep]
-        self.recursive_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            length_function=len,
-            separators=separators,
-            keep_separator=True,
+        # 语义切分器
+        self.embedding = text_emb
+        self.semantic_splitter = SemanticChunker(
+            self.embedding, breakpoint_threshold_type="percentile"
         )
 
     def convert_to_documents(
@@ -54,7 +51,7 @@ class LangChainDocumentConverter:
         header_docs = self.header_splitter.split_text(markdown_content)
 
         # 2. 进一步分割过长的文档
-        all_documents = []
+        documents = []
 
         for i, doc in enumerate(header_docs):
             doc_metadata = doc.metadata.copy()
@@ -66,33 +63,18 @@ class LangChainDocumentConverter:
                     "split_by": "headers",
                 }
             )
+            final_doc = Document(page_content=doc.page_content, metadata=doc_metadata)
+            documents.append(final_doc)
 
-            # 如果文档太长，进一步分割
-            if len(doc.page_content) > 1000:
-                sub_docs = self.recursive_splitter.split_documents([doc])
-
-                for j, sub_doc in enumerate(sub_docs):
-                    sub_metadata = sub_doc.metadata.copy()
-                    sub_metadata.update(doc_metadata)
-                    sub_metadata.update(
-                        {
-                            "sub_chunk_index": j,
-                            "total_sub_chunks": len(sub_docs),
-                            "parent_chunk": i,
-                        }
-                    )
-
-                    final_doc = Document(
-                        page_content=sub_doc.page_content, metadata=sub_metadata
-                    )
-                    all_documents.append(final_doc)
+        # 语义切割
+        final_docs = []
+        for d in documents:
+            if len(d.page_content) > self.text_chunk_size:
+                final_docs.extend(self.semantic_splitter.split_documents([d]))
             else:
-                final_doc = Document(
-                    page_content=doc.page_content, metadata=doc_metadata
-                )
-                all_documents.append(final_doc)
+                final_docs.append(d)
 
-        return all_documents
+        return final_docs
 
     def create_image_documents(
         self, image_infos: List[ImageInfo], parent_metadata: Dict = None

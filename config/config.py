@@ -23,3 +23,10 @@ THRESHOLD = {
 EXPORT_CONFIG = {
     "unit": "county",  # 导出单位（province,city,county）
 }
+
+# 语义分割小模型
+LOCAL_TEXT_EMB_PATH = "/home/gybwg/ai-project/models/Qwen/Qwen3-Embedding-0___6B"
+
+# OCR地址
+DOTS_OCR_IP = "www.wlhcloud.top"
+DOTS_OCR_PORT = 9114

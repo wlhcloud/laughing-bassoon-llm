@@ -3,6 +3,7 @@ import json
 from typing import List, Dict, Optional, Tuple
 from langchain_core.documents import Document
 import torch
+from config.config import DOTS_OCR_IP, DOTS_OCR_PORT
 from core.ocr.dots_ocr.parser import DotsOCRParser
 from core.ocr.complete_document_processor import CompleteDocumentProcessor
 from loguru import logger as log
@@ -13,8 +14,8 @@ class OCRDocumentProcessor:
 
     def __init__(self):
         # 获取OCR配置
-        self._orc_url = "www.wlhcloud.top"
-        self._orc_port = 9114
+        self._orc_url = DOTS_OCR_IP
+        self._orc_port = DOTS_OCR_PORT
         self._orc_api_key = "fsfsdfsdfdsfsdf"
         self._ocr_model_name = "dots_ocr"
 
