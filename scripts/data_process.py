@@ -4,66 +4,79 @@ from loguru import logger as log
 
 from utils.file_utils import get_dir_name
 
+import pandas as pd
 
-def read_excel_get_notices(file_path, sheet_name="Sheet1", check_col=1):
+
+def read_excel_get_notices(file_path, check_col=1):
     """
-    将通知名称与对应的文保单位信息匹配
+    遍历Excel所有工作表，将通知名称与对应的文保单位信息匹配
     :param file_path: Excel文件完整路径
-    :param sheet_name: 工作表名称
     :param check_col: 要校验是否为数字的列索引（从0开始，比如1=第二列）
-    :return: 字典，key=通知名称，value=对应文保单位列表
+    :return: 字典，key=(sheet名称, 通知名称) 或 通知名称（可选），value=对应文保单位列表
     """
-    df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
-    df = df.dropna(how="all")
-    df = df.reset_index(drop=True)
+    # 读取Excel所有sheet的名称列表
+    excel_file = pd.ExcelFile(file_path)
+    sheet_names = excel_file.sheet_names
 
-    # 存储最终结果：通知名称 -> 文保单位列表
+    # 存储最终结果：key=(sheet_name, notice_name)，value=文保单位列表
     result = {}
-    current_notice = None  # 记录当前匹配的通知名称
-    allow_append = False  # 标记：是否允许当前通知接收文保单位数据
 
-    for idx, row in df.iterrows():
-        notice_check_content = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
+    # 遍历每个sheet
+    for sheet_name in sheet_names:
+        # 读取当前sheet数据，保留原始逻辑
+        df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
+        df = df.dropna(how="all")
+        df = df.reset_index(drop=True)
 
-        if (
-            "关于" in notice_check_content
-            or "通知" in notice_check_content
-            or "保护单位" in notice_check_content
-        ) and len(notice_check_content) < 100:
-            current_notice = notice_check_content
-            result[current_notice] = []
+        current_notice = None  # 记录当前匹配的通知名称
+        allow_append = False  # 标记：是否允许当前通知接收文保单位数据
 
-            if idx + 1 < len(df):  # 确保下一行存在
-                next_row_check_col = (
-                    str(df.iloc[idx + 1, check_col]).strip()
-                    if pd.notna(df.iloc[idx + 1, check_col])
+        for idx, row in df.iterrows():
+            notice_check_content = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) else ""
+
+            # 匹配通知名称的逻辑（保留原规则）
+            if (
+                    "关于" in notice_check_content
+                    or "通知" in notice_check_content
+                    or "保护单位" in notice_check_content
+            ) and len(notice_check_content) < 100:
+                current_notice = notice_check_content
+                # 用(sheet名称, 通知名称)作为key，避免不同sheet同名通知冲突，暂时不用
+                result_key = current_notice
+                result[result_key] = []
+
+                if idx + 1 < len(df):  # 确保下一行存在
+                    next_row_check_col = (
+                        str(df.iloc[idx + 1, check_col]).strip()
+                        if pd.notna(df.iloc[idx + 1, check_col])
+                        else ""
+                    )
+                    allow_append = next_row_check_col.replace(".", "").isdigit()
+                else:
+                    allow_append = False
+
+            else:
+                current_check_content = (
+                    str(row.iloc[check_col]).strip()
+                    if pd.notna(row.iloc[check_col])
                     else ""
                 )
-                allow_append = next_row_check_col.replace(".", "").isdigit()
-            else:
-                allow_append = False
 
-        else:
-            current_check_content = (
-                str(row.iloc[check_col]).strip()
-                if pd.notna(row.iloc[check_col])
-                else ""
-            )
+                # 匹配文保单位数据的逻辑
+                if (
+                        current_notice is not None
+                        and allow_append
+                        and current_check_content != ""
+                        and current_check_content.replace(".", "").isdigit()
+                ):
+                    wenbao_info = [
+                        str(cell).strip() if pd.notna(cell) else "" for cell in row
+                    ]
+                    result_key = current_notice
+                    result[result_key].append(wenbao_info)
 
-            if (
-                current_notice is not None
-                and allow_append
-                and current_check_content != ""
-                and current_check_content.replace(".", "").isdigit()
-            ):
-
-                wenbao_info = [
-                    str(cell).strip() if pd.notna(cell) else "" for cell in row
-                ]
-                result[current_notice].append(wenbao_info)
-
-    result = {notice: wb_list for notice, wb_list in result.items() if len(wb_list) > 0}
-    log.info(f"识别到通知行：{result.keys()}")
+    # 过滤掉空的文保单位列表
+    result = {key: wb_list for key, wb_list in result.items() if len(wb_list) > 0}
     return result
 
 

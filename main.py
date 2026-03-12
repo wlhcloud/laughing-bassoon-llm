@@ -19,6 +19,8 @@ def safe_process_county(county_dir, export_unit, parent_result_list):
         county_name = get_dir_name(county_dir)
         # 每个线程维护自己的私有列表，处理当前区县
         current_county_data = []
+        # if county_name != '210115 辽中区':
+        #     return
         batch_process_county(county_dir, current_county_data)
 
         # 逻辑 A: 如果导出粒度是区县，直接在这里完成导出，不再写回主列表

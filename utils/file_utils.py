@@ -53,12 +53,43 @@ def create_output_dir(county_dir):
 
 def find_excel_in_county(county_dir: str) -> str:
     """
-    在区县目录中自动查找“公布名录.xlsx”文件
+    在区县目录中自动查找同时包含“公布”和“名录”的.xlsx文件
+    关键词顺序无关（如“公布名录”“名录公布”都能匹配）
     """
+    # 先校验目录是否存在，避免报错
+    if not os.path.isdir(county_dir):
+        print(f"错误：目录 {county_dir} 不存在")
+        return ""
+
     for file_name in os.listdir(county_dir):
-        if "公布名录" in file_name and file_name.endswith(".xlsx"):
+        # 同时满足：包含“公布”、包含“名录”、以.xlsx结尾
+        if "名录" in file_name and (file_name.endswith(".xlsx") or file_name.endswith('xls')):
             return os.path.join(county_dir, file_name)
+
     return ""
+
+
+def find_dir_excels(county_dir: str) -> List[str]:
+    """
+    在目录中获取所有.xlsx格式的Excel文件路径
+    返回值：包含所有xlsx文件完整路径的列表（未找到则返回空列表）
+    """
+    # 初始化空列表存储结果
+    excel_files = []
+
+    # 校验目录是否存在，避免报错
+    if not os.path.isdir(county_dir):
+        print(f"错误：目录 {county_dir} 不存在")
+        return excel_files
+
+    # 遍历目录下所有文件
+    for file_name in os.listdir(county_dir):
+        # 仅匹配.xlsx后缀的文件（排除目录、其他格式文件）
+        if file_name.endswith(".xlsx") or file_name.endswith('xls'):
+            # 拼接完整文件路径并加入列表
+            excel_files.append(os.path.join(county_dir, file_name))
+
+    return excel_files
 
 
 def find_published_folder_in_county(county_dir: str) -> str:
@@ -93,7 +124,7 @@ def get_folder_recursion_files(published_folder: str) -> List[object]:
         for item in os.listdir(current_dir):
             item_path = os.path.join(current_dir, item)
 
-            if os.path.isfile(item_path):
+            if os.path.isfile(item_path) and item.endswith(".pdf"):
                 files.append((item_path, item))
 
             elif os.path.isdir(item_path):
@@ -101,7 +132,7 @@ def get_folder_recursion_files(published_folder: str) -> List[object]:
 
     _recursive_scan(published_folder)
 
-    print(f"成功读取 {published_folder} 及其子目录下 {len(files)} 个文档")
+    # print(f"成功读取 {published_folder} 及其子目录下 {len(files)} 个文档")
     return files
 
 

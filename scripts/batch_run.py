@@ -14,13 +14,13 @@ from utils.file_utils import (
     get_document_files,
     find_published_folder_in_county,
     get_folder_recursion_files,
-    get_prov_city_county_from_path,
+    get_prov_city_county_from_path, find_dir_excels,
 )
 from scripts.data_process import read_excel_get_notices
 from logger import log
 
 
-def batch_process_county(county_dir: str, result_data=[]):
+def batch_process_county(county_dir: str, result_data):
     """批量处理哈尔滨市所有区县的文保单位信息，并生成结果Excel"""
     # 获取省市
     province_name, city_name, county_name = get_prov_city_county_from_path(county_dir)
@@ -156,6 +156,10 @@ def batch_process_county(county_dir: str, result_data=[]):
                 result_data.append(row_data)
                 continue
 
+            #对匹配文档做抽取，如果对所有请注释
+            if THRESHOLD["documents_match"] < len(matched_docs):
+                matched_docs = matched_docs[:THRESHOLD["documents_match"]]
+
             # 7.6 提取结构化信息
             site_info = None
             final_name_similarity = 0
@@ -205,7 +209,7 @@ def batch_process_county(county_dir: str, result_data=[]):
                             break  # 匹配成功，退出循环
                     else:
                         log.info(
-                            f"名称匹配失败 | 原始名称：{site_name} | 抽取名称：{matched_name} | 相似度：{match_score}%（低于阈值{THRESHOLD['file_match']}%）"
+                            f"名称匹配失败 | 原始名称：{site_name} | 抽取名称：{matched_name} | 相似度：{match_score}%（低于阈值{THRESHOLD['name_match']}%）"
                         )
 
             # 7.7 填充最终数据

@@ -66,6 +66,8 @@ def match_site_with_ocr_docs(site_name, documents, threshold=70):
             # 找到原始文档（对应清洗后的文本）
             best_raw_doc = documents[doc_texts.index(doc_text)]
             result.append((best_raw_doc, source))
+
+    result.sort(key=lambda x: x[1], reverse=True)
     return result
 
 
